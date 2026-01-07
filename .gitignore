@@ -1,7 +1,7 @@
 # Swift Package Manager
 .build/
 Packages/
-.swiftpm/
+
 
 # Xcode & macOS (in case project is opened on a Mac)
 .DS_Store
