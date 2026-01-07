@@ -1,0 +1,25 @@
+# Swift Package Manager
+.build/
+Packages/
+.swiftpm/
+
+# Xcode & macOS (in case project is opened on a Mac)
+.DS_Store
+*.xcworkspace
+*.xcodeproj
+*.xcuserstate
+*.xcuserdata
+DerivedData/
+.idea/
+*.swp
+
+# Swift Playgrounds
+playground.xcworkspace/
+Contents.swift
+
+# Resource artifacts (optional)
+*.generated.swift
+*.modulemap
+
+# Dependency caches
+.swiftpm/WorkspaceState.json

@@ -1,0 +1,71 @@
+{
+    "file_type": "material_library",
+    "version": "1",
+    "library_name": "future_residential",
+    "default": {
+        "diffuse_color": [
+            1.0,
+            0.0,
+            1.0,
+            1.0
+        ],
+        "metallic": 0.0,
+        "roughness": 0.2
+    },
+    "materials": [
+        {
+            "type": "physicallybased",
+            "name": "brick_wall",
+            "metallic": 0.0,
+            "roughness": 0.2,
+            "diffuse_texture": "/Users/andyn/Documents/Docs/StealthGame/_assets/houdini/future_ideal/tex/texture/brick_wall_t.png"
+        },
+        {
+            "type": "physicallybased",
+            "name": "floor_tiles",
+            "metallic": 0.0,
+            "roughness": 0.2,
+            "diffuse_texture": "/Users/andyn/Documents/Docs/StealthGame/_assets/houdini/future_ideal/tex/texture/floor_tiles_t.png"
+        },
+        {
+            "type": "physicallybased",
+            "name": "railings",
+            "metallic": 0.0,
+            "roughness": 0.2,
+            "opacity": 1.0,
+            "opacity_thresh": 0.5,
+            "face_culling": 0,
+            "diffuse_texture": "/Users/andyn/Documents/Docs/StealthGame/_assets/houdini/future_ideal/tex/texture/railing_at.png"
+        },
+        {
+            "type": "physicallybased",
+            "name": "white_wall",
+            "metallic": 0.0,
+            "roughness": 0.2,
+            "diffuse_texture": "/Users/andyn/Documents/Docs/StealthGame/_assets/houdini/future_ideal/tex/texture/white_wall_t.png"
+        },
+        {
+            "type": "physicallybased",
+            "name": "city_atlas",
+            "metallic": 0.0,
+            "roughness": 0.2,
+            "diffuse_texture": "/Users/andyn/Documents/Docs/StealthGame/_assets/houdini/future_ideal/tex/texture/city_atlas.png",
+            "normal_texture": "/Users/andyn/Documents/Docs/StealthGame/_assets/houdini/future_ideal/tex/texture/city_atlas_n.png"
+        },
+        {
+            "type": "glass",
+            "name": "glass",
+            "metallic": 1.0,
+            "roughness": 0.05,
+            "opacity": 0.25,
+            "face_culling": 0,
+            "casts_shadow": 0,
+            "diffuse_color": [
+                0.85,
+                0.95,
+                1.0,
+                1.0
+            ]
+        }
+    ]
+}
