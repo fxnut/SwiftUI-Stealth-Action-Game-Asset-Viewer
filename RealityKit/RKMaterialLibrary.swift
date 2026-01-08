@@ -1,221 +1,137 @@
-import RealityKit
+//
+//  RKMaterialLibrary.swift
+//  Asset Viewer
+//
+//  Created by Andrew Nicholas on 07/01/2026.
+//
+import Foundation
 import UIKit
-import Metal
 
-final class RKMaterialLibrary {
-    private var cache: [String: any Material] = [:]
-    private let bundle: Bundle
-    
-    init(bundle: Bundle = .main) {
-        self.bundle = bundle
-    }
-    
-    func material(for id: String) -> any Material {
-        if let m = cache[id] { return m }
-        
-        var result : any Material = PhysicallyBasedMaterial()
-        
-        // Map IDs -> textures
-        switch id {
-        case "brick_wall":
-            var m = PhysicallyBasedMaterial()
-            m.baseColor.texture = texture(path: "brick_wall_t.png", semantic: .color)
-            m.metallic = 0.0
-            m.roughness = 0.2
-            // m.normal.contents    = image("window_normal")
-            // m.emission.contents = image("window_emissive")
-            result = m
-        case "floor_tiles":            
-            var m = PhysicallyBasedMaterial()
-            m.baseColor.texture = texture(path: "floor_tiles_t.png", semantic: .color)
-            m.metallic = 0.0
-            m.roughness = 0.2
-            result = m
-        case "railings":
-            var m = PhysicallyBasedMaterial()            
-            m.baseColor.texture = texture(path: "railing_at.png", semantic: .color)      
-            m.metallic = 0.0
-            m.roughness = 0.2            
-            // Enable transparency
-            m.blending = .transparent(opacity: 1.0)
-            // Cutout: pixels with alpha < threshold are discarded
-            m.opacityThreshold = 0.5
-            m.faceCulling = .none
-            result = m
-        case "white_wall":            
-            var m = PhysicallyBasedMaterial()
-            m.baseColor.texture = texture(path: "white_wall_t.png", semantic: .color)           
-            m.metallic = 0.0
-            m.roughness = 0.2
-            result = m
-        case "city_atlas":
-            var m = PhysicallyBasedMaterial()
-            m.baseColor.texture = texture(path: "city_atlas.png", semantic: .color)       
-            m.metallic = 0.0
-            m.roughness = 0.2
-            m.normal.texture = texture(path: "city_atlas_n.png", semantic: .normal)
-            result = m     
-        case "glass":
-            do {
-                let m = try makeEnvLatLongReflectionMaterial()
-                result = m
-            } catch {
-                print("Failed to make glass material")
-                print("Error:", error)
-                print("Type:", String(reflecting: type(of: error)))
-                var m = PhysicallyBasedMaterial()
-                m.baseColor.tint = UIColor(red: 0.85, green: 0.95, blue: 1.0, alpha: 1.0)
-                m.blending = .transparent(opacity: 0.25)
-                m.faceCulling = .none
-                
-                m.metallic = 1.0
-                m.roughness = 0.05
-                result = m                
-            }
-        default:
-            var m = PhysicallyBasedMaterial()
-            m.baseColor.tint = UIColor(red: 1.0, green: 0.0, blue: 1.0, alpha: 1.0)       
-            result = m     
-            break
+enum MaterialLibraryDecodeError: Error, CustomStringConvertible {
+    case invalidFileType(String)
+    case unsupportedVersion(String)
+    case missingLibraryName
+
+    var description: String {
+        switch self {
+        case .invalidFileType(let v): return "Invalid file_type: \(v)"
+        case .unsupportedVersion(let v): return "Unsupported version: \(v)"
+        case .missingLibraryName: return "Missing material library name"
         }
-        
-        //if m.baseColor.texture == nil {
-            // print("❌ diffuse.contents is nil for material \(id)")
-        //}
-        cache[id] = result
-        return result
     }
-        
-    func makeEnvLatLongReflectionMaterial() throws -> CustomMaterial {
-        let device = MTLCreateSystemDefaultDevice()!
-        
-        guard let libURL = Bundle.main.url(forResource: "customShaders", withExtension: "metallib") else {
-            print("Missing customShaders.metallib in bundle")
-            throw NSError(domain: "Shader", code: 1, userInfo: [NSLocalizedDescriptionKey: "Missing metallib"])
-        }
-        var mat: CustomMaterial?
-        
-        do {
-            let library = try device.makeLibrary(URL: libURL)
-            
-            let surface = CustomMaterial.SurfaceShader(
-                named: "envLatLongReflectionSurface",
-                in: library
-            )
-            mat = try CustomMaterial(
-                surfaceShader: surface,
-                geometryModifier: nil,
-                lightingModel: .unlit
-            )
-        } catch {
-            print("Failed to load metallib or shader:", error)
-        }            
-                
-        // Provide the env texture to the shader via the custom slot:
-        let env = try TextureResource.load(named: "suburb_street_e") // lat-long/equirect image
-        mat!.custom.texture = .init(env)
-        mat!.custom.value = SIMD4<Float>(6.0, 0.25, 0.0, 0.0)
-        
-        mat!.blending = .transparent(opacity: 1.0)
-        mat!.opacityThreshold = 0.0
-        mat?.writesDepth = false
-        mat?.faceCulling = .none
-        return mat!
-    }
-    
-    
-    private func buildShaderLibrary() throws -> MTLLibrary {
-        let shaderURL = Bundle.main.url(forResource: "shaders", withExtension: "txt")!
-        let source = try! String(contentsOf: shaderURL, encoding: .utf8)
-    
-        let device = MTLCreateSystemDefaultDevice()!
-    
-        let opt = MTLCompileOptions()
-        opt.enableLogging = true
-        // Those two options are important.
-        opt.libraryType = .dynamic
-        opt.installName = "shaders.metallib"
-        
-        // We need to create MTLLibrary...
-        let library = try device.makeLibrary(source: source, options: opt)
-        /*
-        // ...that we convert into dynamic library...
-        let dynLib = try device.makeDynamicLibrary(library: library)
-        
-        // ...that we can serialize to disk as metallib file...
-        let tempUrl : URL = .temporaryDirectory.appending(
-            component: dynLib.installName, directoryHint: .notDirectory)
-        try dynLib.serialize(to: tempUrl)
-        
-        // ... that we can finally read as ShaderLibrary
-        let sLib = ShaderLibrary(url: tempUrl)*/
-        return library
 }
+
+struct RKMaterialLibrary : Decodable {
+    let file_type: String
+    let version: Int
+    let library_name: String
     
-    private func makeGlassMaterial() throws -> CustomMaterial {
-        //let device = MTLCreateSystemDefaultDevice()!
-        //let library = device.makeDefaultLibrary()!
-        let library = try buildShaderLibrary()
-        
-        let surface = CustomMaterial.SurfaceShader(named: "unlitGlassShader", in: library)
-        //let geom = CustomMaterial.GeometryModifier(named: "myGeometryModifier", in: library) // optional
-        
-        let mat = try CustomMaterial(
-            surfaceShader: surface,
-            geometryModifier: nil,
-            lightingModel: .unlit              // .lit / .clearcoat / .unlit
-        )
-        return mat
+    let default_mat: RKMaterial
+    let materials: [RKMaterial]
+    
+    enum CodingKeys: String, CodingKey {
+        case file_type, version, library_name, materials
+        case default_mat = "default"
     }
     
-    private func texture(path: String, semantic: TextureResource.Semantic) -> MaterialParameters.Texture? {
-        guard let url = resourceURL(for: path) else {
-            print("❌ Resource not found in bundle: \(path)")
-            dumpTextureFolderOnce()
-            return nil
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        file_type = try c.decode(String.self, forKey: .file_type)
+        
+        // Validate file_type is correct
+        guard file_type == "material_library" else {
+            throw MaterialLibraryDecodeError.invalidFileType(file_type)
+        }
+
+        // Version is in JSON as a string, but convert it to Int
+        let s = try c.decode(String.self, forKey: .version)
+        guard let v = Int(s) else { throw MaterialLibraryDecodeError.unsupportedVersion(s) }
+        version = v
+
+        // Validate version == 1
+        guard version == 1 else {
+            throw MaterialLibraryDecodeError.unsupportedVersion(String(version))
         }
         
-        guard let img = UIImage(contentsOfFile: url.path), let cg = img.cgImage else {
-            print("❌ Found file but UIImage/CGImage failed to load: \(url.path)")
-            return nil
+        library_name = try c.decode(String.self, forKey: .library_name)
+        guard !library_name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw MaterialLibraryDecodeError.missingLibraryName
         }
-        
-        do {
-            let tex = try TextureResource(
-                image: cg,
-                withName: (path as NSString).lastPathComponent,
-                options: .init(semantic: semantic)
-            )
-            return MaterialParameters.Texture(tex)
-        } catch {
-            print("❌ TextureResource creation failed for \(url.path): \(error)")
-            return nil
-        }
+
+        default_mat = try c.decode(RKMaterial.self, forKey: .default_mat)
+        materials = try c.decode([RKMaterial].self, forKey: .materials)
     }
-        
-    private func resourceURL(for path: String) -> URL? {
-        let ns = path as NSString
-        let ext = ns.pathExtension.isEmpty ? "png" : ns.pathExtension
-        let base = ns.deletingPathExtension
-        let dir = (base as NSString).deletingLastPathComponent
-        let name = (base as NSString).lastPathComponent
-        
-        // If no folder provided, dir will be "."
-        let subdir = (dir == "." || dir.isEmpty) ? nil : dir
-        
-        return bundle.url(forResource: name, withExtension: ext, subdirectory: subdir)
+}
+
+enum RKMaterialType: String, Decodable {
+    case physicallyBased = "physicallybased"
+    case glass
+    case unknown
+}
+
+struct RKMaterial : Decodable {
+    let type: RKMaterialType
+    let name: String
+    let metallic: Float
+    let roughness: Float
+    let diffuse_color: [Float]
+    let diffuse_texture: String
+    let opacity: Float
+    let opacity_thresh: Float
+    let normal_texture: String
+    let face_culling: Int
+    let casts_shadow: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case type, name, metallic, roughness, diffuse_color, diffuse_texture,
+             opacity, opacity_thresh, normal_texture, face_culling, casts_shadow
     }
     
-    private var didDump = false
-    private func dumpTextureFolderOnce() {
-        guard !didDump else { return }
-        didDump = true
-        
-        if let urls = bundle.urls(forResourcesWithExtension: "png", subdirectory: "texture") {
-            print("✅ PNGs in bundle/texture:")
-            for u in urls { print("  - \(u.lastPathComponent)") }
-        } else {
-            print("⚠️ No PNGs found under bundle subdirectory 'texture'")
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        type = try c.decodeIfPresent(RKMaterialType.self, forKey: .type) ?? RKMaterialType.unknown
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? "default"
+        metallic = try c.decodeIfPresent(Float.self, forKey: .metallic) ?? 0
+        roughness = try c.decodeIfPresent(Float.self, forKey: .roughness) ?? 0.2
+        diffuse_color = try c.decodeIfPresent([Float].self, forKey: .diffuse_color) ?? [1.0, 1.0, 1.0, 1.0]
+        diffuse_texture = try c.decodeIfPresent(String.self, forKey: .diffuse_texture) ?? ""
+        opacity = try c.decodeIfPresent(Float.self, forKey: .opacity) ?? 1
+        opacity_thresh = try c.decodeIfPresent(Float.self, forKey: .opacity_thresh) ?? 0
+        normal_texture = try c.decodeIfPresent(String.self, forKey: .normal_texture) ?? ""
+        face_culling = try c.decodeIfPresent(Int.self, forKey: .face_culling) ?? 1
+        casts_shadow = try c.decodeIfPresent(Int.self, forKey: .casts_shadow) ?? 1
+    }
+    
+}
+
+
+enum MaterialLibraryLoadError: Error, CustomStringConvertible {
+    case fileNotFound(name: String, ext: String)
+    case decodeFailed(underlying: Error)
+
+    var description: String {
+        switch self {
+        case .fileNotFound(let name, let ext):
+            return "Could not find \(name).\(ext) in the app bundle."
+        case .decodeFailed(let underlying):
+            return "Failed to decode material library JSON: \(underlying)"
         }
-    }    
+    }
+}
+
+func loadMaterialLibraryFromBundle(_ filename: String, ext: String = "matlib") throws -> RKMaterialLibrary {
+    let bundle: Bundle = Bundle.main
+    
+    guard let url = bundle.url(forResource: filename, withExtension: ext) else {
+        throw MaterialLibraryLoadError.fileNotFound(name: filename, ext: ext)
+    }
+
+    let data = try Data(contentsOf: url)
+
+    do {
+        return try JSONDecoder().decode(RKMaterialLibrary.self, from: data)
+    } catch {
+        // This will include your MaterialLibraryDecodeError too, if thrown from init(from:)
+        throw MaterialLibraryLoadError.decodeFailed(underlying: error)
+    }
 }

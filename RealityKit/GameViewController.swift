@@ -21,7 +21,7 @@ final class GameViewController: UIViewController {
     private let yawNode = Entity()
     private let pitchNode = Entity()    
     
-    private let materials = RKMaterialLibrary()
+    private let materials = RKMaterialLibraryStorage()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -38,7 +38,8 @@ final class GameViewController: UIViewController {
         setupCamera(parent: world)
         updateCamera()
         do {
-            try loadMesh(parent: world)
+            let lib = try loadMaterialLibraryFromBundle("future_residential")
+            try loadMesh(parent: world, materialLibrary: lib)
         } catch {
             print("Failed to load mesh:", String(reflecting: error))
             showError(title: "Failed to load mesh:", error: error)
@@ -87,13 +88,13 @@ final class GameViewController: UIViewController {
         }        
     }
     
-    private func loadMesh(parent: Entity) throws {        
+    private func loadMesh(parent: Entity, materialLibrary: RKMaterialLibrary) throws {
         if let url = findResourceURL(name: resourceName, ext: resourceExt) {
             var mesh = try MeshParser().parse(url: url)
             mesh.reverseWinding()
 
             let entity = RKMeshBuilder.makeMeshNode(from: mesh) { materialId in
-                self.materials.material(for: materialId)
+                self.materials.material(materialLibrary: materialLibrary, for: materialId)
             }
             
             entity.name = "previewMesh"

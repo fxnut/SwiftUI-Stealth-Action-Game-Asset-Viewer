@@ -16,6 +16,8 @@ let package = Package(
         .iOSApplication(
             name: "Asset Viewer",
             targets: ["AppModule"],
+            bundleIdentifier: "com.andynicholas.stealthactiongameassetviewer",
+            teamIdentifier: "KPCR8TJL5W",
             displayVersion: "1.0",
             bundleVersion: "1",
             appIcon: .placeholder(icon: .tv),
